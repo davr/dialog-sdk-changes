@@ -42,7 +42,7 @@ extern "C" {
  * \brief Controls whether LCDC adapter tries to automatically configure the system clocks
  */
 #ifndef CONFIG_LCDC_AUTO_CONFIGURE_CLOCKS
-#define CONFIG_LCDC_AUTO_CONFIGURE_CLOCKS       (1)
+#define CONFIG_LCDC_AUTO_CONFIGURE_CLOCKS       (0)
 #endif
 
 /**

@@ -244,7 +244,7 @@ typedef enum {
 /**
  * \brief MIPI Display Command Set
  */
-typedef enum {
+typedef enum  {
         HW_LCDC_MIPI_DCS_NOP                     = 0x00,//!< No Operation
         HW_LCDC_MIPI_DCS_SOFT_RESET              = 0x01,//!< Software Reset
         HW_LCDC_MIPI_DCS_GET_COMPRESSION_MODE    = 0x03,//!< Get the current compression mode
@@ -524,6 +524,7 @@ typedef enum {
         LCDC_FREQ_80MHz   = HW_LCDC_DIV(80000000U),//!< LCD interface frequency at 80MHz
         LCDC_FREQ_48MHz   = HW_LCDC_DIV(48000000U),//!< LCD interface frequency at 48MHz
         LCDC_FREQ_40MHz   = HW_LCDC_DIV(40000000U),//!< LCD interface frequency at 40MHz
+        LCDC_FREQ_32MHz   = HW_LCDC_DIV(32000000U),//!< LCD interface frequency at 32MHz
         LCDC_FREQ_26_7MHz = HW_LCDC_DIV(26700000U),//!< LCD interface frequency at 26.7MHz
         LCDC_FREQ_24MHz   = HW_LCDC_DIV(24000000U),//!< LCD interface frequency at 24MHz
         LCDC_FREQ_20MHz   = HW_LCDC_DIV(20000000U),//!< LCD interface frequency at 20MHz

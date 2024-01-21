@@ -19,10 +19,21 @@
 #include "osal.h"
 #include "resmgmt.h"
 #include "hw_cpm.h"
+#include "ad_pmu.h"
 #include "hw_gpio.h"
+#include "hw_led.h"
 #include "hw_watchdog.h"
 #include "sys_clock_mgr.h"
 #include "sys_power_mgr.h"
+#include "sys_watchdog.h"
+
+#include "gdi.h"
+
+#define PIN_RGB_R HW_GPIO_PIN_30
+#define PIN_RGB_G HW_GPIO_PIN_29
+#define PIN_RGB_B HW_GPIO_PIN_28
+
+#define PORT_RGB HW_GPIO_PORT_1
 
 /* Task priorities */
 #define mainTEMPLATE_TASK_PRIORITY              ( OS_TASK_PRIORITY_NORMAL )
@@ -45,22 +56,43 @@ static OS_TASK_FUNCTION(prvTemplateTask, pvParameters);
 
 static OS_TASK_FUNCTION(system_init, pvParameters)
 {
+#if defined CONFIG_RETARGET
+        extern void retarget_init(void);
+#endif
         OS_TASK task_h = NULL;
 
-        cm_sys_clk_init(sysclk_XTAL32M);
+        sys_clk_t sys_clk_prio[5] = {
+                sysclk_PLL160,
+                sysclk_XTAL32M,
+                sysclk_RCHS_96,
+                sysclk_RCHS_32,
+                sysclk_RCHS_64,
+        };
 
+        cm_sys_clk_set_priority(sys_clk_prio);
+        cm_sys_clk_init(sysclk_XTAL32M);
         cm_apb_set_clock_divider(apb_div1);
         cm_ahb_set_clock_divider(ahb_div1);
         cm_lp_clk_init();
 
+        /* Initialize platform watchdog */
+        sys_watchdog_init();
+
+
+
         /* Prepare the hardware to run this demo. */
         prvSetupHardware();
 
-        /* Set the desired sleep mode. */
+        /* Set the desired sleep mode */
+        pm_set_wakeup_mode(true);
         pm_sleep_mode_set(pm_mode_extended_sleep);
 
-        /* Set the desired wakeup mode. */
-        pm_set_sys_wakeup_mode(pm_sys_wakeup_mode_normal);
+#if defined CONFIG_RETARGET
+      //  retarget_init();
+#endif
+        cm_sys_clk_request(AD_LCDC_DEFAULT_CLK);
+
+
 
         /* Start main task here (text menu available via UART1 to control application) */
         OS_TASK_CREATE( "Template",            /* The text name assigned to the task, for
@@ -118,26 +150,28 @@ int main( void )
  */
 static OS_TASK_FUNCTION(prvTemplateTask, pvParameters)
 {
-        OS_TICK_TIME xNextWakeTime;
-        static uint32_t test_counter=0;
 
-        /* Initialise xNextWakeTime - this only needs to be done once. */
-        xNextWakeTime = OS_GET_TICK_COUNT();
 
-        for ( ;; ) {
-                /* Place this task in the blocked state until it is time to run again.
-                   The block time is specified in ticks, the constant used converts ticks
-                   to ms.  While in the Blocked state this task will not consume any CPU
-                   time. */
-                xNextWakeTime += mainCOUNTER_FREQUENCY_MS;
-                OS_DELAY_UNTIL(xNextWakeTime);
-                test_counter++;
 
-                if (test_counter % (1000 / OS_TICKS_2_MS(mainCOUNTER_FREQUENCY_MS)) == 0) {
-                        printf("#");
-                        fflush(stdout);
-                }
-        }
+       /* Make layer visible */
+       gdi_set_layer_enable(HW_LCDC_LAYER_0, true);
+
+        for (int i = 0 ;; i++ )
+        {
+
+                OS_DELAY_MS(10);
+
+                hw_led_pwm_set_duty_cycle_pct_off(HW_LED_ID_LED_1, 8000,0);
+
+                uint16_t* fb = (uint16_t*)gdi_get_frame_buffer_addr(HW_LCDC_LAYER_0);
+
+                for(int ix = 0; ix < 240; ix++)
+                        for(int iy = 0; iy < 240; iy++)
+                              fb[iy*240+ix] = ((ix^i)<<8) + (iy^i);
+
+
+
+       }
 }
 
 /**
@@ -146,6 +180,8 @@ static OS_TASK_FUNCTION(prvTemplateTask, pvParameters)
  */
 static void periph_init(void)
 {
+        /* Initializes the GDI instance, allocate memory and set default background color */
+        gdi_init();
 }
 
 /**
@@ -153,9 +189,52 @@ static void periph_init(void)
  */
 static void prvSetupHardware( void )
 {
+        const hw_led_config led_conf = { {5000,1000,1000}, {0,0,0}, 1000};
+
+        const gpio_config gpio_conf[] = {
+                HW_GPIO_PINCONFIG(PORT_RGB, PIN_RGB_R, OUTPUT_PUSH_PULL, GPIO, true),
+                HW_GPIO_PINCONFIG(PORT_RGB, PIN_RGB_G, OUTPUT_PUSH_PULL, GPIO, true),
+                HW_GPIO_PINCONFIG(PORT_RGB, PIN_RGB_B, OUTPUT_PUSH_PULL, GPIO, true),
+                HW_GPIO_PINCONFIG_END
+        };
 
         /* Init hardware */
         pm_system_init(periph_init);
+
+
+        hw_gpio_configure(gpio_conf);
+
+        hw_gpio_configure_pin_power(PORT_RGB, PIN_RGB_R, HW_GPIO_POWER_V33);
+        hw_gpio_configure_pin_power(PORT_RGB, PIN_RGB_G, HW_GPIO_POWER_V33);
+        hw_gpio_configure_pin_power(PORT_RGB, PIN_RGB_B, HW_GPIO_POWER_V33);
+
+
+        ad_pmu_rail_config_t vled_rail_config;
+
+        vled_rail_config.enabled_onwakeup = true;
+        vled_rail_config.enabled_onsleep = false;
+        vled_rail_config.rail_vled.current_onsleep = HW_PMU_VLED_MAX_LOAD_150;
+        vled_rail_config.rail_vled.current_onwakeup = HW_PMU_VLED_MAX_LOAD_150;
+        vled_rail_config.rail_vled.voltage_common = HW_PMU_VLED_VOLTAGE_4V5;
+
+        ad_pmu_configure_rail(PMU_RAIL_VLED, &vled_rail_config);
+
+        hw_led_on(HW_LED_ALL_LED_MASK);
+
+        hw_led_init(&led_conf);
+
+        hw_led_pwm_on(HW_LED_ALL_LED_MASK);
+
+        hw_led_pwm_set_load_sel(HW_LED_ID_LED_1, 7);
+        hw_led_pwm_set_load_sel(HW_LED_ID_LED_2, 2);
+        hw_led_pwm_set_load_sel(HW_LED_ID_LED_3, 2);
+
+
+
+
+
+
+
 
 }
 

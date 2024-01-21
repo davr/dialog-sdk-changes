@@ -84,7 +84,7 @@ class CliProgrammer(Application):
         self.gdb_cmd = gdb_cmd
         self.gdb_port = gdb_port
         self.trc_cmd = trc_cmd
-        self.bootloader = bootloader
+        self.bootloader = os.path.join(SDK_ROOT, 'binaries', 'uartboot.bin')
         self.jlink_id = jlink_id
         self.jlink_path = jlink_path
         self.fd = None

@@ -14,6 +14,7 @@
 
 #include <string.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include "osal.h"
 #include "resmgmt.h"
 #include "ble_common.h"
@@ -115,6 +116,8 @@ static OS_TASK_FUNCTION(system_init, pvParameters)
                        handle);                         /* The task handle. */
         OS_ASSERT(handle);
 
+        printf("\nSystem Init complete\n");
+        fflush(stdout);
         /* the work of the SysInit task is done */
         OS_TASK_DELETE(OS_GET_CURRENT_TASK());
 }
@@ -167,6 +170,8 @@ static void handle_evt_gap_connected(ble_evt_gap_connected_t *evt)
         /**
          * Manage behavior upon connection
          */
+        printf("Connected\n");
+                      fflush(stdout);
 }
 
 static void handle_evt_gap_disconnected(ble_evt_gap_disconnected_t *evt)
@@ -174,13 +179,16 @@ static void handle_evt_gap_disconnected(ble_evt_gap_disconnected_t *evt)
         /**
          * Manage behavior upon disconnection
          */
-
+               printf("Disconnected\n");
+               fflush(stdout);
         // Restart advertising
         ble_gap_adv_start(GAP_CONN_MODE_UNDIRECTED);
 }
 
 static void handle_evt_gap_pair_req(ble_evt_gap_pair_req_t *evt)
 {
+        printf("Pair Req\n");
+                       fflush(stdout);
         ble_gap_pair_reply(evt->conn_idx, true, evt->bond);
 }
 
@@ -228,6 +236,8 @@ static OS_TASK_FUNCTION(ble_adv_demo_task, pvParameters)
                 if (!hdr) {
                         continue;
                 }
+
+                printf("Ble Event\n");
 
                 switch (hdr->evt_code) {
                 case BLE_EVT_GAP_CONNECTED:

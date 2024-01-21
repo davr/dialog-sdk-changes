@@ -54,7 +54,7 @@
 #include "../../peripherals/src/hw_sys_internal.h"
 #include "../../system/sys_man/sys_timer_internal.h"
 
-
+#include "FreeRTOS.h"
 /*
  * Linker symbols
  *
@@ -90,9 +90,11 @@ void *_sbrk(int incr)
                  * above, it is straightforward to determine the missing space.
                  */
                 volatile int stored_incr __UNUSED;
+//                extern void* rh_malloc_psram(size_t size);
+//                return rh_malloc_psram(incr);
 
                 stored_incr = incr;
-                ASSERT_ERROR(0);
+      //          ASSERT_ERROR(0);
 
                 errno = ENOMEM;
                 return (void *)-1;
@@ -624,6 +626,9 @@ __STATIC_FORCEINLINE void disable_unused_peripherals(void)
  *         using initialized variables should not be called from here.
  */
 void SystemInitPre(void) __attribute__((section("text_reset")));
+
+
+
 void SystemInitPre(void)
 {
         assertion_functions_set_to_uninit();
@@ -684,6 +689,8 @@ void SystemInitPre(void)
         REG_SETF(CRG_TOP, CLK_RADIO_REG, CMAC_SYNCH_RESET, 1);
 
         disable_unused_peripherals();
+
+
 }
 
 __STATIC_FORCEINLINE void external_memories_automode_init(void)

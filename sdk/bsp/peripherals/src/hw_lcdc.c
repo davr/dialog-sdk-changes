@@ -1271,7 +1271,11 @@ int hw_lcdc_dcs_cmd_params(HW_LCDC_MIPI_DCS cmd, const uint8_t *params, size_t p
         case HW_LCDC_PHY_DUAL_SPI:
         case HW_LCDC_PHY_MIPI_SPI3:
         case HW_LCDC_PHY_MIPI_SPI4:
-                return hw_lcdc_gen_cmd_params(&cmd, sizeof(cmd), params, param_len);
+        {
+                uint8_t cmds[1];
+                cmds[0] = cmd;
+                return hw_lcdc_gen_cmd_params(cmds,1, params, param_len);
+        }
         default:
                 return HW_LCDC_ERR_UNSUPPORTED;
         }
@@ -1348,13 +1352,18 @@ void hw_lcdc_mipi_set_qpsi_mode(HW_LCDC_QSPI_MODE mode)
 
 int hw_lcdc_dcs_read(HW_LCDC_MIPI_DCS cmd, uint8_t *data, size_t data_len, size_t dummy_ticks)
 {
+
         switch (lcdc_data.phy) {
         case HW_LCDC_PHY_MIPI_DBIB:
         case HW_LCDC_PHY_QUAD_SPI:
         case HW_LCDC_PHY_DUAL_SPI:
         case HW_LCDC_PHY_MIPI_SPI3:
         case HW_LCDC_PHY_MIPI_SPI4:
-                return hw_lcdc_gen_read(&cmd, sizeof(cmd), data, data_len, dummy_ticks);
+        {
+                uint8_t cmds[1];
+                cmds[0] = cmd;
+                return hw_lcdc_gen_read((uint8_t*)cmds,1, data, data_len, dummy_ticks);
+        }
         default:
                 return HW_LCDC_ERR_UNSUPPORTED;
         }

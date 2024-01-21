@@ -3529,7 +3529,7 @@ static portTASK_FUNCTION( prvIdleTask, pvParameters )
                  * valid. */
                 xExpectedIdleTime = prvGetExpectedIdleTime();
 
-                if( xExpectedIdleTime >= configEXPECTED_IDLE_TIME_BEFORE_SLEEP )
+                if(0)// xExpectedIdleTime >= configEXPECTED_IDLE_TIME_BEFORE_SLEEP )
                 {
                     vTaskSuspendAll();
                     {

@@ -31,7 +31,7 @@
 #define dg_configFLASH_CONNECTED_TO             (FLASH_CONNECTED_TO_1V8)
 #define dg_configFLASH_POWER_DOWN               (0)
 #define dg_configFLASH_AUTODETECT               (1)
-#define dg_configOQSPI_FLASH_AUTODETECT         (1)
+#define dg_configOQSPI_FLASH_AUTODETECT         (0)
 
 #define dg_configPOWER_1V8_ACTIVE               (1)
 #define dg_configPOWER_1V8_SLEEP                (1)
@@ -41,7 +41,7 @@
 #define dg_configCRYPTO_ADAPTER                 (0)
 
 #define dg_configUSE_HW_WKUP                    (0)
-#define dg_configUSE_HW_QSPI2                   (1)
+#define dg_configUSE_HW_QSPI2                   (0)
 
 #define dg_configFLASH_CONFIG_VERIFY            (1)
 

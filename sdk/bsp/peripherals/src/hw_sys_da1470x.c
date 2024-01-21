@@ -503,8 +503,10 @@ bool hw_sys_is_compatible_chip(void)
         return true;
 #else
         if (hw_sys_device_info_check(DEVICE_CHIP_ID_MASK, DEVICE_CHIP_ID_2798)) {
-                if (hw_sys_device_info_check(DEVICE_REVISION_MASK, DEVICE_REV_A) &&
-                    hw_sys_device_info_check(DEVICE_SWC_MASK, DEVICE_SWC_1)) {
+                if (hw_sys_device_info_check(DEVICE_REVISION_MASK, DEVICE_REV_A)
+           //             && hw_sys_device_info_check(DEVICE_SWC_MASK, DEVICE_SWC_1)
+                        )
+                {
                         return true;
                 }
         } else if (hw_sys_device_info_check(DEVICE_CHIP_ID_MASK, DEVICE_CHIP_ID_3107)) {

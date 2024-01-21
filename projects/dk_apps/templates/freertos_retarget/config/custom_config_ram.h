@@ -50,6 +50,71 @@
 #define dg_configUSE_SYS_TRNG                   (0)
 #define dg_configUSE_SYS_DRBG                   (0)
 
+#ifdef CONFIG_RETARGET
+#define dg_configUSE_HW_DMA                     (1)
+#define dg_configUSE_HW_UART                    (1)
+#else
+#define dg_configUSE_HW_DMA                     (0)
+#define dg_configUSE_HW_UART                    (0)
+#endif
+
+#define dg_configLCDC_ADAPTER                   ( 1 )
+#define dg_configUSE_HW_LCDC                    ( 1 )
+#define dg_configUSE_GPU                        ( 1 )
+#define dg_configI2C_ADAPTER                    ( 1 )
+#define dg_configUSE_HW_I2C                     ( 1 )
+#define dg_configUSE_HW_WKUP                    ( 1 )
+
+#define dg_configUSE_HW_QSPI2                   ( 0 )
+#define dg_configUSE_HW_OQSPI                   ( 0 )
+#define dg_configUSE_HW_QSPI1                   ( 0 )
+
+#define dg_configQSPIC2_DEV_AUTODETECT          ( 0 )
+
+#define dg_configOQSPI_FLASH_AUTODETECT         ( 0 )
+#define dg_configFLASH_AUTODETECT               ( 0 )
+
+/*************************************************************************************************\
+ * Display model selection. Note that one display model can be selected at a time.
+ */
+#define dg_configUSE_BOE139F454SM               ( 0 )
+#define dg_configUSE_DT280QV10CT                ( 0 )
+#define dg_configUSE_E120A390QSR                ( 0 )
+#define dg_configUSE_ILI9341                    ( 0 )
+#define dg_configUSE_LPM010M297B                ( 0 )
+#define dg_configUSE_LPM012M134B                ( 0 )
+#define dg_configUSE_LPM012M503A                ( 0 )
+#define dg_configUSE_LPM013M091A                ( 0 )
+#define dg_configUSE_LS013B7DH03                ( 0 )
+#define dg_configUSE_LS013B7DH06                ( 0 )
+#define dg_configUSE_MCT024L6W240320PML         ( 0 )
+#define dg_configUSE_MRB3973_DBIB               ( 0 )
+#define dg_configUSE_NHD43480272EFASXN          ( 0 )
+#define dg_configUSE_PSP27801                   ( 0 )
+#define dg_configUSE_T1D3BP006_DSPI             ( 0 )
+#define dg_configUSE_T1D3BP006                  ( 1 )
+#define dg_configUSE_T1D54BP002                 ( 0 )
+
+#define LV_CONF_INCLUDE_SIMPLE
+#define LV_LVGL_H_INCLUDE_SIMPLE
+/*************************************************************************************************\
+ * Touch controller selection. Note that one touch driver can be selected at a time.
+ */
+#ifdef PERFORMANCE_METRICS
+#define dg_configUSE_TOUCH_SIMULATION           ( 0 )
+#else
+#define dg_configUSE_FT6206                     ( 0 )
+#define dg_configUSE_FT5306                     ( 0 )
+#define dg_configUSE_ZT2628                     ( 1 )
+#endif
+
+
+#if dg_configUSE_BOE139F454SM
+#define AD_LCDC_DEFAULT_CLK                     sysclk_RCHS_96
+#else
+#define AD_LCDC_DEFAULT_CLK                     sysclk_RCHS_96
+#endif
+
 /* Include bsp default values */
 #include "bsp_defaults.h"
 /* Include middleware default values */

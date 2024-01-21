@@ -69,7 +69,7 @@
 #endif
 
 #ifndef CONFIG_FREERTOS_HEAP_ALGO
-    #define CONFIG_FREERTOS_HEAP_ALGO                   4
+    #define CONFIG_FREERTOS_HEAP_ALGO                   5
 #endif
 
 extern uint32_t SystemCoreClock;

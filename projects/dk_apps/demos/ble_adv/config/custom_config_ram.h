@@ -60,6 +60,7 @@
 
 #define dg_configGPADC_ADAPTER                  ( 1 )
 
+#define dg_configUSE_CONSOLE                    ( 1 )
 
 /*************************************************************************************************\
  * BLE configuration

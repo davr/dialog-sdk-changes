@@ -18,7 +18,7 @@
 #define NVMS_PARTITION_TABLE_SIZE       (0x00001000)    /* Recommended location, follows the Product Headers. */
 
 #define NVMS_FIRMWARE_PART_START        (OQSPI_MEM1_VIRTUAL_BASE_ADDR + 0x00003000)
-#define NVMS_FIRMWARE_PART_SIZE         (0x003FD000)    /* Image firmware max size ~ 4MB */
+#define NVMS_FIRMWARE_PART_SIZE         (0x006FD000)    /* Image firmware max size ~ 4MB */
 
 /* +------------------4MB---------------------+ */
 

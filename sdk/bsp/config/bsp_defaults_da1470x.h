@@ -334,11 +334,11 @@
 
 
 #ifndef dg_configUSE_HW_QSPI
-#define dg_configUSE_HW_QSPI                            (1)
+#define dg_configUSE_HW_QSPI                            (0)
 #endif
 
 #ifndef dg_configUSE_HW_QSPI2
-#define dg_configUSE_HW_QSPI2                           (0)
+#define dg_configUSE_HW_QSPI2                           (1)
 #endif
 
 #ifndef dg_configUSE_HW_RTC
