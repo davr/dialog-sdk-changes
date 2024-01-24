@@ -39,6 +39,7 @@
 #endif
 #include "uartboot_types.h"
 #include "protocol.h"
+#include "qspi_automode.h"
 
 #define BOOTUART (HW_UART2)
 #define BOOTUART_STEP                   3

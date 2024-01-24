@@ -128,7 +128,7 @@ class CliProgrammer(Application):
         if self.trc_cmd is not None:
             cmd.extend(['--trc', str(self.trc_cmd)])
         if self.bootloader is not None:
-            cmd.extend(['-b', str(self.bootloader)])
+            cmd.extend(['-b',  str(self.bootloader)])
 
         cmd.extend(['--save', cfg_path])
         return super(CliProgrammer, self).run(args=cmd, silent=True)
@@ -144,6 +144,9 @@ class CliProgrammer(Application):
 
     def run(self, check_booter_load=True, serial_port=None, **kwargs):
         cmd = ['--cfg', self.__temp_cfg]
+        print("Config:")
+        with open(self.__temp_cfg, "r") as f:
+            print(f.read())
 
         if serial_port:
             cmd.append(str(serial_port))

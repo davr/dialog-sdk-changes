@@ -43,6 +43,7 @@ class Application(object):
             'stdout': subprocess.PIPE,
             'stderr': subprocess.PIPE,
         }
+        print(process_params)
 
         sys.stdout.flush()
         pr = subprocess.Popen(**process_params)

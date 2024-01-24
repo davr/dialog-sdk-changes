@@ -78,11 +78,13 @@ static int serial_read_char(size_t timeout)
         int err = serial_read(&c, 1, timeout);
 
         if (err == 0) {
+                printf("!! %d\n", err);
                 return -1; // timeout
         } else if (err < 0) {
+                printf("!! %d\n", err);
                 return err;
         } else {
-                //printf("Received 0x%02x\n", c);
+                printf("<0x%02x%c", c, (c>32&&c<127)?c:' ');
                 return c;
         }
 }
@@ -97,6 +99,7 @@ static int serial_read_char(size_t timeout)
  */
 static int serial_write_char(uint8_t c)
 {
+        printf(">0x%02x%c", c, (c>32&&c<127)?c:' ');
         return serial_write(&c, 1);
 }
 
@@ -129,6 +132,7 @@ static int get_boot_stage(int timeout)
         int err = ERR_PROT_NO_RESPONSE; // assume it nothing comes
         int ver;
         time_ms_t time_limit = get_current_time_ms() + timeout;
+        printf("[getboot]");
 
         while (get_current_time_ms() < time_limit) {
                 c = serial_read_char(time_limit - get_current_time_ms());
@@ -139,28 +143,35 @@ static int get_boot_stage(int timeout)
                         c = serial_read_char(30);
                         // Just STX, first stage
                         if (c < 0) {
+                                printf("[1st]");
                                 return 0;
                         }
 
                         // Verify that second stage is correct
                         if (c != SOH) {
+                                printf("[nsoh]");
                                 continue;
                         }
                         c = serial_read_char(20);
                         if (c < 0) {
+                                printf("[n1]");
                                 continue;
                         }
                         ver = c << 8;
                         c = serial_read_char(20);
                         if (c < 0) {
+                                printf("[n2]");
                                 continue;
                         }
                         ver += c;
                         if (ver == 0) {
+                                printf("[n0]");
                                 return ERR_PROT_UNSUPPORTED_VERSION;
                         }
+                        printf("[v:%d]", ver);
                         return ver;
                 default:
+                        printf("[n?]");
                         err = ERR_PROT_UNKNOWN_RESPONSE;
                 }
         }
@@ -196,7 +207,7 @@ static int send_initial_code(const uint8_t *buf, uint32_t size)
                 serial_write(extended_mode_header, 6);
         }
 
-        if (serial_read_char(100) != ACK) {
+        if (serial_read_char(1000) != ACK) {
                 return ERR_PROT_BOOT_LOADER_REJECTED;
         }
 

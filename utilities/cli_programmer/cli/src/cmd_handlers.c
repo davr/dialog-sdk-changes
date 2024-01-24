@@ -290,6 +290,12 @@ static int cmdh_write_qspi(int argc, char *argv[])
                 return 0;
         }
 
+        ret = prog_verify_connection();
+        if(ret != CONN_ESTABLISHED) {
+                prog_print_err("Could not verify connection\n");
+                return 0;
+        }
+
         ret = prog_write_file_to_qspi(addr, fname, size);
         if (ret) {
                 prog_print_err("write to %s failed: %s (%d)\n", mem_name, prog_get_err_message(ret),
@@ -324,6 +330,8 @@ static int cmdh_write_qspi_bytes(int argc, char *argv[])
                 }
                 buf[i - 1] = (uint8_t) b;
         }
+
+        ret = prog_verify_connection();
 
         ret = prog_write_to_qspi(addr, buf, argc - 1);
         if (ret) {
@@ -1132,6 +1140,11 @@ static int cmdh_write_oqspi(int argc, char *argv[])
 
         if (size > size_limit) {
                 prog_print_err("invalid size exceeding %s size\n", mem_name);
+                return 0;
+        }
+
+        if(!prog_verify_connection()) {
+                prog_print_err("could not connect to bootloader");
                 return 0;
         }
 

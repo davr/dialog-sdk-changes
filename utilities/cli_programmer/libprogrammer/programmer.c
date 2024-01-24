@@ -854,7 +854,7 @@ int prog_write_to_qspi(uint32_t flash_address, const uint8_t *buf, uint32_t size
         while (offset < size) {
                 uint32_t chunk_size = size - offset;
 
-                if (retry_cnt > 10) {
+                if (retry_cnt > 1) {
                         err = ERR_PROG_QSPI_WRITE;
                         prog_print_err("Write to qspi failed. Abort. \n");
                         goto done;
@@ -1671,7 +1671,7 @@ int prog_write_to_oqspi(uint32_t flash_address, const uint8_t *buf, uint32_t siz
         while (offset < size) {
                 uint32_t chunk_size = size - offset;
 
-                if (retry_cnt > 10) {
+                if (retry_cnt > 2) {
                         err = ERR_PROG_OQSPI_WRITE;
                         prog_print_err("Write to oqspi failed. Abort. \n");
                         goto done;

@@ -72,7 +72,7 @@
 #define ADDRESS_TMP                     (0xFFFFFFFF)
 #define VIRTUAL_BUF_ADDRESS             (0x80000000)
 #define GDB_SERVER_REPEATS_LIMIT        3
-#define DBG_GDB_SERVER                  0
+#define DBG_GDB_SERVER                  1
 #define ACK_CHAR                        '+'
 #define NACK_CHAR                       '-'
 #define CHUNK_SIZE                      0x2000
@@ -147,6 +147,9 @@ extern char *target_reset_cmd;
 static int gdb_server_read_ack(void);
 static int gdb_server_send_swd_cmd_header(uint32_t data_len, const uint8_t *data);
 
+bool OPENOCD = true;
+bool PYOCD = true;
+
 #ifdef WIN32
 typedef ULONGLONG time_ms_t;
 #define gdb_server_get_current_time_ms GetProcAddress(GetModuleHandle("kernel32.dll"), "GetTickCount64")
@@ -183,6 +186,14 @@ static void set_swd_addresses(void)
                                                                              sizeof(uint32_t) * 2]);
 
         swd_addr.ack_nak_addr = swd_addr.cmd_num_addr + 3 * sizeof(uint32_t);
+
+#if DBG_GDB_SERVER
+        printf("run_swd = 0x%08x\n", swd_addr.run_swd_addr);
+        printf("cmd_num = 0x%08x\n", swd_addr.cmd_num_addr);
+        printf("cmd_buf = 0x%08x\n", swd_addr.cmd_buf_addr);
+        printf("buf     = 0x%08x\n", swd_addr.buf_addr);
+        printf("ack_nak = 0x%08x\n", swd_addr.ack_nak_addr);
+#endif
 }
 
 /* calculation of checksum from data */
@@ -654,7 +665,11 @@ static bool gdb_sever_check_checksum(void)
                                                                                         - 4);
         uint8_t correct = chars_to_uint8(gdb_server_recv_buf.buf[gdb_server_recv_buf.len - 2],
                                 gdb_server_recv_buf.buf[gdb_server_recv_buf.len - 1], &status);
-
+#if DBG_GDB_SERVER
+        if(from_frame != correct) {
+                printf(" %02x != %02x\n", from_frame, correct);
+        }
+#endif
         return (from_frame == correct);
 }
 
@@ -700,9 +715,11 @@ static int gdb_server_send(const char *buf, uint32_t buf_len)
 #if DBG_GDB_SERVER
         printf("<-- ");
 
-        for (i = 0; i < (int) buf_len; i++) {
-                printf("%c", buf[i]);
+        for (i = 0; i < (int) buf_len && i < 80; i++) {
+                printf("%c", (buf[i]>32&&buf[i]<127)?buf[i]:' ');
         }
+        if(buf_len>80)
+                printf("...");
 
         printf("\n");
 #endif
@@ -735,12 +752,12 @@ static inline int gdb_server_nack(void)
 /* receive data from GDB Server, check frame and send acknowledgement */
 static int gdb_server_recv_with_ack(void)
 {
-        uint8_t repeats_cnt = 0;
-        int status;
+//        uint8_t repeats_cnt = 0;
+//        int status;
 #if DBG_GDB_SERVER
         int i;
 #endif
-start:
+//start:
         gdb_server_recv_buf.len = 0;
 
         /* receive until data is incomplete */
@@ -751,27 +768,31 @@ start:
 #if DBG_GDB_SERVER
                 printf("--> ");
 
-                for (i = 0; i < (int) gdb_server_recv_buf.len; i++) {
-                        printf("%c", gdb_server_recv_buf.buf[i]);
+                for (i = 0; i < (int) gdb_server_recv_buf.len && i < 80; i++) {
+                        char c = gdb_server_recv_buf.buf[i];
+                        printf("%c", (c>32&&c<127)?c:' ');
                 }
+                if(gdb_server_recv_buf.len>80)
+                        printf("...");
 
                 printf("\n");
 #endif
         } while (!gdb_server_check_frame());
 
         if (!gdb_sever_check_checksum()) {
-                /* checksum of received data is incorrect */
-                if (repeats_cnt >= GDB_SERVER_REPEATS_LIMIT) {
-                        /* exceeded repeats limit */
-                        return ERR_GDB_SERVER_CRC_MISMATCH;
-                }
-
-                if ((status = gdb_server_nack()) != 0) {
-                        return status;
-                }
-
-                ++repeats_cnt;
-                goto start;
+                ;
+//                /* checksum of received data is incorrect */
+//                if (repeats_cnt >= GDB_SERVER_REPEATS_LIMIT) {
+//                        /* exceeded repeats limit */
+//                        return ERR_GDB_SERVER_CRC_MISMATCH;
+//                }
+//
+//                if ((status = gdb_server_nack()) != 0) {
+//                        return status;
+//                }
+//
+//                ++repeats_cnt;
+//                goto start;
         }
 
         return gdb_server_ack();
@@ -865,6 +886,7 @@ static int gdb_server_send_write_cmd(uint32_t addr, uint32_t data_len, const uin
         cmd = malloc(data_len * 2 + 8 + 8 + 2 + 5 + 1);
 
         if (!cmd) {
+                printf("Failed to malloc\n");
                 return ERR_ALLOC_FAILED;
         }
 
@@ -899,6 +921,9 @@ static int gdb_server_send_write_cmd(uint32_t addr, uint32_t data_len, const uin
  */
 static int gdb_server_send_local_cmd(const char *req)
 {
+#if DBG_GDB_SERVER
+        printf("<GDB '%s'\n", req);
+#endif
         uint32_t len;
         uint32_t i;
         char *cmd;
@@ -1031,6 +1056,9 @@ static int gdb_server_reset_device()
         }
 
         if (target_reset_cmd && is_localhost(configuration.host_name)) {
+#if DBG_GDB_SERVER
+                printf("running cmd: %s\n", target_reset_cmd);
+#endif
 #ifdef WIN32
                 STARTUPINFO si = { .cb=sizeof(STARTUPINFO) };
                 PROCESS_INFORMATION pi;
@@ -1057,13 +1085,16 @@ static int gdb_server_reset_device()
                 }
 #endif
         } else {
+#if DBG_GDB_SERVER
+                printf("Resetting GDB stuff\n");
+#endif
                 /* remove all breakpoints */
-                if ((status = gdb_server_send_local_cmd("clrbp")) != 0) {
+                if ((status = gdb_server_send_local_cmd(OPENOCD?"rbp all":"clrbp")) != 0) {
                         return status;
                 }
 
                 /* hardware platform reset */
-                if ((status = gdb_server_send_local_cmd("reset 0")) != 0) {
+                if ((status = gdb_server_send_local_cmd(OPENOCD?"reset halt":"reset 0")) != 0) {
                         return status;
                 }
 
@@ -1078,13 +1109,13 @@ static int gdb_server_reset_device()
                 }
 
                 /* write MAGIC VALUE */
-               sprintf(cmd, "memU32 0x%x = 0xdeadbeef", regs->magic_value1_reg);
+               sprintf(cmd, OPENOCD?"mww 0x%x 0xdeadbeef":"memU32 0x%x = 0xdeadbeef", regs->magic_value1_reg);
                status = gdb_server_send_local_cmd(cmd);
-               sprintf(cmd, "memU32 0x%x = 0xdeadbeef", regs->magic_value2_reg);
+               sprintf(cmd, OPENOCD?"mww 0x%x 0xdeadbeef":"memU32 0x%x = 0xdeadbeef", regs->magic_value2_reg);
                status = gdb_server_send_local_cmd(cmd);
-               sprintf(cmd, "memU32 0x%x = 0xdeadbeef", regs->magic_value3_reg);
+               sprintf(cmd, OPENOCD?"mww 0x%x 0xdeadbeef":"memU32 0x%x = 0xdeadbeef", regs->magic_value3_reg);
                status = gdb_server_send_local_cmd(cmd);
-               sprintf(cmd, "memU32 0x%x = 0xdead10cc", regs->magic_value4_reg);
+               sprintf(cmd, OPENOCD?"mww 0x%x = 0xdead10cc":"memU32 0x%x = 0xdead10cc", regs->magic_value4_reg);
                status = gdb_server_send_local_cmd(cmd);
                if (status  != 0) {
                        return status;
@@ -1098,7 +1129,7 @@ static int gdb_server_reset_device()
                         return status;
                 }
 
-                if ((status = gdb_server_send_local_cmd("reset 0")) != 0) {
+                if ((status = gdb_server_send_local_cmd(OPENOCD?"reset halt":"reset 0")) != 0) {
                         return status;
                 }
 
@@ -1107,7 +1138,7 @@ static int gdb_server_reset_device()
                         return status;
                 }
 
-                if ((status = gdb_server_send_local_cmd("reset 0")) != 0) {
+                if ((status = gdb_server_send_local_cmd(OPENOCD?"reset halt":"reset 0")) != 0) {
                         return status;
                 }
         }
@@ -1231,13 +1262,15 @@ static int gdb_server_upload_executable(uint8_t *executable_code, size_t executa
                 return status;
         }
 
-        /* hardware platform reset */
-        if ((status = gdb_server_send_local_cmd("reset 0")) != 0) {
-                return status;
+        if (!OPENOCD) {
+                /* hardware platform reset */
+                if ((status = gdb_server_send_local_cmd("reset 0")) != 0) {
+                        return status;
+                }
         }
 
         /* start application */
-        if ((status = gdb_server_send_local_cmd("go")) != 0) {
+        if ((status = gdb_server_send_local_cmd(OPENOCD?"resume":"go")) != 0) {
                 return status;
         }
 
@@ -1267,22 +1300,31 @@ static bool gdb_server_cmd_dummy(void)
 
         /* Here cmd_num_cp should be set to proper value - e.g. read from uartboot */
         if ((status = gdb_server_send_swd_cmd_header(sizeof(header_buf), header_buf)) != 0) {
+                printf("Could not send cmd header %d\n", status);
                 return false;
         }
 
         /* receive data */
         if ((status = gdb_server_send_read_cmd(swd_addr.buf_addr, sizeof(rsp_buf))) != 0) {
+                printf("Could not read SWD response buf %d\n", status);
                 return false;
         }
 
         if (!gdb_server_frame_to_uint8_buf(rsp_buf, sizeof(rsp_buf))) {
+             printf("Could not convert SWD response buf\n");
              return false;
         }
 
         if (memcmp(rsp_buf, tmp, sizeof(rsp_buf))) {
+                printf("SWD response doesn't match\n");
+                printf("Expected - Got\n");
+                for(int i=0; i<sizeof(rsp_buf); i++) {
+                        printf("%02x %c - %02x %c\n", tmp[i], tmp[i], rsp_buf[i], rsp_buf[i]);
+                }
                 return false;
         }
 
+        printf("Bootloader ok!\n");
         return true;
 }
 
@@ -1295,30 +1337,36 @@ static bool gdb_server_uartboot_is_running()
         status = gdb_server_send_read_cmd(swd_addr.run_swd_addr - 4, sizeof(swd_info_buf));
 
         if (status) {
+                printf("Could not read SWD info\n");
                 return false;
         }
 
         if (!gdb_server_frame_to_uint8_buf((uint8_t *) swd_info_buf, sizeof(swd_info_buf))) {
+                printf("Could not convert SWD info buf\n");
                 return false;
         }
 
         if (!swd_info_buf[4]) {
                 /* SWD loop is not enable or binaries are different */
+                printf("SWD loop is not enable or binaries are different\n");
                 return false;
         }
 
         if (memcmp(swd_info_buf, marker, 4)) {
                 /* Marker was not found at proper address */
+                printf("Marker was not found at proper address\n");
                 return false;
         }
 
         status = gdb_server_send_read_cmd(swd_addr.cmd_num_addr, sizeof(cmd_num_cp));
 
         if (status) {
+                printf("Could not read cmd_num\n");
                 return false;
         }
 
         if (!gdb_server_frame_to_uint8_buf((uint8_t *) &cmd_num_cp, sizeof(cmd_num_cp))) {
+                printf("Could not convert cmd_num buf");
                 return false;
         }
 
@@ -1328,11 +1376,14 @@ static bool gdb_server_uartboot_is_running()
 connection_status_t gdb_server_verify_connection(void)
 {
         if (gdb_server_sock == INVALID_SOCKET) {
+                printf("GDB socket error\n");
                 return CONN_ERROR;
         } else {
                 if (configuration.check_bootloader && gdb_server_uartboot_is_running()) {
+                        printf("Connected to bootloader\n");
                         return CONN_ESTABLISHED;
                 } else {
+                        printf("Possible to connect\n");
                         return CONN_ALLOWED;
                 }
         }
@@ -1343,10 +1394,12 @@ static int gdb_server_send_swd_cmd_header_without_continue(uint32_t data_len, co
         int status;
 
         if ((status = gdb_server_send_write_cmd(swd_addr.cmd_buf_addr, data_len, data)) != 0) {
+                printf("Failed to send write\n");
                 return status;
         }
 
         if ((status = gdb_server_set_nak()) != 0) {
+                printf("Failed to set nak\n");
                 return status;
         }
 
@@ -1362,11 +1415,17 @@ static int gdb_server_send_swd_cmd_header(uint32_t data_len, const uint8_t *data
         int status;
 
         if ((status = gdb_server_send_swd_cmd_header_without_continue(data_len, data) != 0)) {
+                printf("Failed to send cmd\n");
                 return status;
         }
 
         if ((gdb_server_send_continue()) != 0) {
+                printf("Failed to send continue\n");
                 return status;
+        }
+
+        if(gdb_server_send_local_cmd("wait_halt 1000") != 0) {
+                printf("CPU did not halt after command\n");
         }
 
         /* Check that command returns ACK or NAK */
@@ -1562,6 +1621,9 @@ void gdb_server_get_boot_loader_code(uint8_t **code, size_t *size)
 /* write to RAM could be direct - without using uartboot command */
 int gdb_server_cmd_write(const uint8_t *buf, size_t size, uint32_t addr)
 {
+#if DBG_GDB_SERVER
+        printf("writing %d bytes to 0x%08x\n", size, addr);
+#endif
         const prog_chip_regs_t *regs;
         const char *chip_rev;
         int status = 0;
@@ -1641,13 +1703,17 @@ static int gdb_server_read_ack(void)
 
         /* read ACK or NAK left by command execution in swd area */
         if ((status = gdb_server_send_read_cmd(swd_addr.ack_nak_addr, 1)) != 0) {
+                printf("Could not read ack status\n");
                 return status;
         }
 
         /* Decode ACK or NAK from GDB one byte read */
         if (!gdb_server_frame_to_uint8_buf(&ack_nak, sizeof(ack_nak))) {
+                printf("Could not decode ack status\n");
                 return ERR_GDB_SERVER_INVALID_RESPONSE;
         }
+
+        printf("ack: %02x (a=%02x,n=%02x)\n", ack_nak, ACK, NAK);
 
         return (ack_nak != ACK) ? ERR_PROT_COMMAND_ERROR : 0;
 }
@@ -2080,12 +2146,12 @@ int gdb_server_cmd_upload_bootloader(void)
         }
 
         /* hardware platform reset */
-        if ((status = gdb_server_send_local_cmd("reset 0")) != 0) {
+        if ((status = gdb_server_send_local_cmd(OPENOCD?"reset halt":"reset 0")) != 0) {
                 return status;
         }
 
         /* stop program execution on platform */
-        if ((status = gdb_server_send_local_cmd("halt")) != 0) {
+        if (OPENOCD && (status = gdb_server_send_local_cmd("halt")) != 0) {
                 return status;
         }
 
